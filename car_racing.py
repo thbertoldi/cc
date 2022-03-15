@@ -653,8 +653,8 @@ if __name__ == "__main__":
         restart = False
         while True:
             register_input()
-            actions.append(a)
-            states.append(s)
+            actions.append(a.copy())
+            states.append(s.copy())
             s, r, done, info = env.step(a)
             total_reward += r
             if steps % 200 == 0 or done:
