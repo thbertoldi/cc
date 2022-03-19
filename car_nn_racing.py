@@ -1,9 +1,14 @@
 __credits__ = ["Andrea PIERRÉ"]
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
 import sys
 import math
 from typing import Optional
 
+import torch
 import numpy as np
 import pygame
 from pygame import gfxdraw
@@ -612,43 +617,44 @@ class CarRacing(gym.Env, EzPickle):
             self.isopen = False
 
 
-a = {} # Deveria carregar o net.state_dict()
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.conv1 = nn.Conv2d(3, 32, 8, stride=4)
+        self.conv2 = nn.Conv2d(32, 64, 4, stride=2)
+        self.conv3 = nn.Conv2d(64, 64, 3, stride=1)
+        self.fc1 = nn.Linear(64, 512)
+        self.fc2 = nn.Linear(512, 3)
+        self.activation = nn.Sigmoid()
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = F.relu(x)
+        x = self.conv2(x)
+        x = F.relu(x)
+        x = self.conv3(x)
+        x = F.relu(x)
+        x = torch.flatten(x, 1)
+        x = self.fc1(x)
+        x = F.relu(x)
+        x = self.fc2(x)
+        x = F.relu(x)
+        x = self.activation(x)
+        return x
+
+nn = Net()
+nn.load_state_dict(torch.load("resp.pth"))
+
 def consult_nn(state):
-    return a[state]
+    k = torch.FloatTensor(state)
+    return nn(k)
 
 if __name__ == "__main__":
     a = np.array([0.0, 0.0, 0.0])
 
-    def register_input():
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
-                    a[0] = -1.0
-                if event.key == pygame.K_RIGHT:
-                    a[0] = +1.0
-                if event.key == pygame.K_UP:
-                    a[1] = +1.0
-                if event.key == pygame.K_DOWN:
-                    a[2] = +0.8  # set 1.0 for wheels to block to zero rotation
-                if event.key == pygame.K_RETURN:
-                    global restart
-                    restart = True
-
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_LEFT:
-                    a[0] = 0
-                if event.key == pygame.K_RIGHT:
-                    a[0] = 0
-                if event.key == pygame.K_UP:
-                    a[1] = 0
-                if event.key == pygame.K_DOWN:
-                    a[2] = 0
-
     env = CarRacing()
     env.render()
 
-    actions = []
-    states = []
     isopen = True
     while isopen:
         s = env.reset()
@@ -656,11 +662,10 @@ if __name__ == "__main__":
         steps = 0
         restart = False
         while True:
-            register_input()
             a = consult_nn(np.transpose(s.copy()))
-            actions.append(a.copy())
-            states.append(s.copy())
-            s, r, done, info = env.step(a)
+            a = a[1] # Gambiarra, tem algo errado com o valor de retorno!
+            a[0] = ((a[0]-0.5)*2)
+            s, r, done, info = env.step(a.detach().numpy())
             total_reward += r
             if steps % 200 == 0 or done:
                 print("\naction " + str([f"{x:+0.2f}" for x in a]))
@@ -669,6 +674,4 @@ if __name__ == "__main__":
             isopen = env.render()
             if done or restart or isopen == False:
                 break
-        np.save("states.npy", states)
-        np.save("actions.npy", actions)
     env.close()
