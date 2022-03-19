@@ -1,4 +1,3 @@
-import gym
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -7,21 +6,24 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from PIL import Image
+SHOW_IMAGES = False
 
 def load_data():
     actions = np.load("actions.npy", allow_pickle=True)
+    actions = actions.astype(np.longlong)
+
     states = np.load("states.npy", allow_pickle=True)
     print(f"Tenho {len(actions)} ações")
     print(f"Tenho {len(states)} estados")
-    # _, ax = plt.subplots(3, 1)
-    # for i in range(3):
-    #     ax[i].plot(actions[:, i])
-    # plt.show()
-    plt.imshow(states[300, :, :, :])
-    plt.show()
-    plt.imshow(states[600, :, :, :])
-    plt.show()
+    if SHOW_IMAGES:
+        _, ax = plt.subplots(3, 1)
+        for i in range(3):
+            ax[i].plot(actions[:, i])
+        plt.show()
+        plt.imshow(states[300, :, :, :])
+        plt.show()
+        plt.imshow(states[600, :, :, :])
+        plt.show()
     return (torch.from_numpy(actions), states)
 
 class Net(nn.Module):
@@ -35,11 +37,15 @@ class Net(nn.Module):
         self.activation = nn.Sigmoid()
 
     def forward(self, x):
+        print("##################")
+        print(x.size())
         x = self.conv1(x)
         x = F.relu(x)
         x = self.conv2(x)
         x = F.relu(x)
         x = self.conv3(x)
+        print("##################")
+        print(x.size())
         x = F.relu(x)
         x = torch.flatten(x, 1)
         x = self.fc1(x)
@@ -53,7 +59,6 @@ if __name__ == "__main__":
     metadata = load_data()
     net = Net()
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
     for epoch in range(2):
         for i, _ in enumerate(metadata):
             action, state = metadata[0][i], metadata[1][i]
@@ -62,11 +67,13 @@ if __name__ == "__main__":
             output = net(torch.FloatTensor(state))
             print(f"Out tamanho {len(output)}")
             print(f"Out {output}")
-            # action[0], action[1], action[2] = (action[0] + 1)/2, action[1], action[2]
-            loss = criterion(output[-1], action)
+            action[0], action[1], action[2] = (action[0] + 1)/2, action[1], action[2]
+            action = torch.reshape(action, (1, *action.size()))
+            output = torch.reshape(output, (1, *output.size()))
+            print(action.size())
+            loss = criterion(output, action)
             print("aplicou loss")
             loss.backward()
-            optimizer.step()
             running_loss = loss.item()
             if i % 200 == 199:
                 print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 200:.3f}')
