@@ -109,7 +109,6 @@ if __name__ == "__main__":
                     old_action[i, 2],
                 ]
                 i_action = toCrossFormat(i_action, 2)
-                
                 action.append(i_action)
 
             action = np.array(action)

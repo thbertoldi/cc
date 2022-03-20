@@ -1,5 +1,6 @@
 __credits__ = ["Andrea PIERRÉ"]
 
+from numpy.core.fromnumeric import argmax
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -617,6 +618,9 @@ class CarRacing(gym.Env, EzPickle):
             self.isopen = False
 
 
+
+BATCH_SIZE = 10
+
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
@@ -625,7 +629,7 @@ class Net(nn.Module):
         self.conv3 = nn.Conv2d(64, 64, 3, stride=1)
         self.fc1 = nn.Linear(1024, 512)
         self.fc2 = nn.Linear(512, 128)
-        self.fc3 = nn.Linear(128, 3)
+        self.fc3 = nn.Linear(128, 8)
         self.activation = nn.Sigmoid()
 
     def forward(self, x):
@@ -644,19 +648,20 @@ class Net(nn.Module):
         x = self.fc2(x)
         x = F.relu(x)
         x = self.fc3(x)
-        # x = torch.sigmoid(x)
-        x = F.softmax(x, dim=3)
-        x = torch.argmax(x)
+        x = F.relu(x)
+        x = torch.reshape(x, shape=(-1, 4, 2))
+        x = F.softmax(x, dim=2)
+
         return x
 
-
-nn = Net()
-nn.load_state_dict(torch.load("resp.pth"))
+nnnn = Net()
+nnnn.load_state_dict(torch.load("resp.pth"))
 
 
 def consult_nn(state):
     k = torch.FloatTensor(state)
-    return nn(k)
+    k = torch.reshape(k, shape=(1, *k.size()))
+    return nnnn(k)
 
 
 if __name__ == "__main__":
@@ -672,10 +677,18 @@ if __name__ == "__main__":
         steps = 0
         restart = False
         while True:
-            a = consult_nn(np.transpose(s.copy()))
-            a = a.max(-2)[1]
-            a[0], a[1], a[2] = ((a[0] - 0.5) * 2), a[1] - 0.5, a[2] - 0.5
-            s, r, done, info = env.step(a.detach().numpy())
+            b = consult_nn(np.transpose(s.copy()))
+            a1 = torch.argmax(b[0, 0]).detach().numpy()
+            a2 = torch.argmax(b[0, 1]).detach().numpy()
+            a3 = torch.argmax(b[0, 2]).detach().numpy()
+            a4 = torch.argmax(b[0, 3]).detach().numpy()
+
+            new_a1 = a1 - a2
+            new_action = np.array([new_a1, a3, a4])
+            a[0] = new_a1
+            a[1] = a3
+            a[2] = a4
+            s, r, done, info = env.step(a)
             total_reward += r
             if steps % 200 == 0 or done:
                 print("\naction " + str([f"{x:+0.2f}" for x in a]))
