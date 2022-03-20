@@ -37,15 +37,11 @@ class Net(nn.Module):
         self.activation = nn.Sigmoid()
 
     def forward(self, x):
-        print("##################")
-        print(x.size())
         x = self.conv1(x)
         x = F.relu(x)
         x = self.conv2(x)
         x = F.relu(x)
         x = self.conv3(x)
-        print("##################")
-        print(x.size())
         x = F.relu(x)
         x = torch.flatten(x, 1)
         x = self.fc1(x)
@@ -57,23 +53,23 @@ class Net(nn.Module):
 
 if __name__ == "__main__":
     metadata = load_data()
+    print(len(metadata))
     net = Net()
     criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(net.parameters(), lr = 0.01, momentum=0.9)
     for epoch in range(2):
-        for i, _ in enumerate(metadata):
+        running_loss = 0.0
+        for i,_  in enumerate(metadata[0]):
             action, state = metadata[0][i], metadata[1][i]
             state = np.transpose(state)
-            print(f"Got size {len(state)}")
+            optimizer.zero_grad()
             output = net(torch.FloatTensor(state))
-            print(f"Out tamanho {len(output)}")
-            print(f"Out {output}")
-            action[0], action[1], action[2] = (action[0] + 1)/2, action[1], action[2]
+            action[0], action[1], action[2] = (action[0] + 1)/2, action[1] + 0.5, action[2] + 0.5
             action = torch.reshape(action, (1, *action.size()))
             output = torch.reshape(output, (1, *output.size()))
-            print(action.size())
             loss = criterion(output, action)
-            print("aplicou loss")
             loss.backward()
+            optimizer.step()
             running_loss = loss.item()
             if i % 200 == 199:
                 print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 200:.3f}')

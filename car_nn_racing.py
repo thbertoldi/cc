@@ -663,8 +663,8 @@ if __name__ == "__main__":
         restart = False
         while True:
             a = consult_nn(np.transpose(s.copy()))
-            a = a[1] # Gambiarra, tem algo errado com o valor de retorno!
-            a[0] = ((a[0]-0.5)*2)
+            a = a[0]
+            a[0], a[1], a[2] = ((a[0]-0.5)*2), a[1]-0.5, a[2]-0.5
             s, r, done, info = env.step(a.detach().numpy())
             total_reward += r
             if steps % 200 == 0 or done:
