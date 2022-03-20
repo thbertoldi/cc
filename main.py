@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 SHOW_IMAGES = False
-BATCH_SIZE = 10
+BATCH_SIZE = 64
 
 
 def load_data():
@@ -34,24 +34,23 @@ def load_data():
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, 8, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, 4, stride=2)
-        self.conv3 = nn.Conv2d(64, 64, 3, stride=1)
-        self.fc1 = nn.Linear(1024, 512)
-        self.fc2 = nn.Linear(512, 128)
-        self.fc3 = nn.Linear(128, 8)
+        self.conv1 = nn.Conv2d(3, 32, 3)
+        self.conv2 = nn.Conv2d(32, 64, 3)
+        self.conv3 = nn.Conv2d(64, 96, 2)
+        self.fc1 = nn.Linear(42336, 1024)
+        self.fc2 = nn.Linear(1024, 512)
+        self.fc3 = nn.Linear(512, 8)
         self.activation = nn.Sigmoid()
 
     def forward(self, x):
         x = self.conv1(x)
         x = F.relu(x)
-        # x = F.max_pool2d(x, 2)
+        x = F.max_pool2d(x, 2)
         x = self.conv2(x)
         x = F.relu(x)
-        # x = F.max_pool2d(x, 2)
+        x = F.max_pool2d(x, 2)
         x = self.conv3(x)
         x = F.relu(x)
-        x = F.max_pool2d(x, 2)
         x = torch.flatten(x, 1)
         x = self.fc1(x)
         x = F.relu(x)
@@ -61,9 +60,7 @@ class Net(nn.Module):
         x = F.relu(x)
         x = torch.reshape(x, shape=(BATCH_SIZE, 4, 2))
         x = F.softmax(x, dim=2)
-        # print("antes", x.size())
-        #print(x.size())
-
+        
         return x
 
 def toCrossFormat(x, n_classes):
@@ -80,15 +77,26 @@ if __name__ == "__main__":
     print(len(metadata))
     net = Net()
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(net.parameters(), lr=0.1, momentum=0.5)
+    optimizer = torch.optim.SGD(net.parameters(), lr=0.0001, momentum=0.8)
     torch.autograd.set_detect_anomaly(True)
     all_actions = []
     all_outputs = []
     losses = []
+
+
+    #pre processing
+
+    actions = metadata[0]
+    states = metadata[1]
+    
+    states = ((states / 255) - 0.5) * 2
+    
+
+
     for epoch in range(1):
         running_loss = 0.0
-        for i in range(len(metadata[0])-BATCH_SIZE-1):
-            action, state = metadata[0][i:i+BATCH_SIZE], metadata[1][i:i+BATCH_SIZE]
+        for i in range(len(states)-BATCH_SIZE-1):
+            action, state = (actions[i:i+BATCH_SIZE], states[i:i+BATCH_SIZE])
             # action, state = metadata[0:1][i], metadata[1:1+1][i]
 
             state = np.transpose(state)
