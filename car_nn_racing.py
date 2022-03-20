@@ -623,31 +623,41 @@ class Net(nn.Module):
         self.conv1 = nn.Conv2d(3, 32, 8, stride=4)
         self.conv2 = nn.Conv2d(32, 64, 4, stride=2)
         self.conv3 = nn.Conv2d(64, 64, 3, stride=1)
-        self.fc1 = nn.Linear(64, 512)
-        self.fc2 = nn.Linear(512, 3)
+        self.fc1 = nn.Linear(1024, 512)
+        self.fc2 = nn.Linear(512, 128)
+        self.fc3 = nn.Linear(128, 3)
         self.activation = nn.Sigmoid()
 
     def forward(self, x):
         x = self.conv1(x)
         x = F.relu(x)
+        # x = F.max_pool2d(x, 2)
         x = self.conv2(x)
         x = F.relu(x)
+        # x = F.max_pool2d(x, 2)
         x = self.conv3(x)
         x = F.relu(x)
+        x = F.max_pool2d(x, 2)
         x = torch.flatten(x, 1)
         x = self.fc1(x)
         x = F.relu(x)
         x = self.fc2(x)
         x = F.relu(x)
-        x = self.activation(x)
+        x = self.fc3(x)
+        # x = torch.sigmoid(x)
+        x = F.softmax(x, dim=3)
+        x = torch.argmax(x)
         return x
+
 
 nn = Net()
 nn.load_state_dict(torch.load("resp.pth"))
 
+
 def consult_nn(state):
     k = torch.FloatTensor(state)
     return nn(k)
+
 
 if __name__ == "__main__":
     a = np.array([0.0, 0.0, 0.0])
@@ -663,8 +673,8 @@ if __name__ == "__main__":
         restart = False
         while True:
             a = consult_nn(np.transpose(s.copy()))
-            a = a[0]
-            a[0], a[1], a[2] = ((a[0]-0.5)*2), a[1]-0.5, a[2]-0.5
+            a = a.max(-2)[1]
+            a[0], a[1], a[2] = ((a[0] - 0.5) * 2), a[1] - 0.5, a[2] - 0.5
             s, r, done, info = env.step(a.detach().numpy())
             total_reward += r
             if steps % 200 == 0 or done:
