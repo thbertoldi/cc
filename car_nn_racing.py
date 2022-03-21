@@ -619,40 +619,35 @@ class CarRacing(gym.Env, EzPickle):
 
 
 
-BATCH_SIZE = 10
-
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, 8, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, 4, stride=2)
-        self.conv3 = nn.Conv2d(64, 64, 3, stride=1)
-        self.fc1 = nn.Linear(1024, 512)
-        self.fc2 = nn.Linear(512, 128)
-        self.fc3 = nn.Linear(128, 8)
-        self.activation = nn.Sigmoid()
+        self.conv1 = nn.Conv2d(3, 32, 3, stride=2)
+        self.conv2 = nn.Conv2d(32, 64, 3, padding="same")
+        self.conv3 = nn.Conv2d(64, 64, 2, padding="same")
+        self.fcy = nn.Linear(1600, 4)
+        self.fcz = nn.Linear(1600, 1)
 
     def forward(self, x):
         x = self.conv1(x)
         x = F.relu(x)
-        # x = F.max_pool2d(x, 2)
+        x = F.max_pool2d(x, 2)
         x = self.conv2(x)
         x = F.relu(x)
-        # x = F.max_pool2d(x, 2)
+        x = F.max_pool2d(x, 2)
         x = self.conv3(x)
         x = F.relu(x)
         x = F.max_pool2d(x, 2)
         x = torch.flatten(x, 1)
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.fc2(x)
-        x = F.relu(x)
-        x = self.fc3(x)
-        x = F.relu(x)
-        x = torch.reshape(x, shape=(-1, 4, 2))
-        x = F.softmax(x, dim=2)
 
-        return x
+        y = self.fcy(x)
+        y = torch.reshape(y, shape=(-1, 2, 2))
+        y = F.softmax(y, dim=2)
+
+        z = self.fcz(x)
+        z = torch.sigmoid(z) * 2 - 1
+
+        return (z, y)
 
 nn_done = Net()
 nn_done.load_state_dict(torch.load("resp.pth"))
@@ -677,15 +672,10 @@ if __name__ == "__main__":
         steps = 0
         restart = False
         while True:
-            result = consult_nn(np.transpose(s.copy()))
-            a1 = torch.argmax(result[0, 0]).detach().numpy()
-            a2 = torch.argmax(result[0, 1]).detach().numpy()
-            a3 = torch.argmax(result[0, 2]).detach().numpy()
-            a4 = torch.argmax(result[0, 3]).detach().numpy()
-            new_a1 = a1 - a2
-            a[0] = new_a1
-            a[1] = a3
-            a[2] = a4
+            direct, b = consult_nn(np.transpose(s.copy()))
+            a[0] = direct/10
+            a[1] = torch.argmax(b[0][0])
+            a[2] = torch.argmax(b[0][1])
             s, r, done, info = env.step(a)
             total_reward += r
             if steps % 200 == 0 or done:
