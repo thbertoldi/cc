@@ -82,7 +82,6 @@ if __name__ == "__main__":
 
     states, actions = preprocessing(metadata)
 
-    # training loop
     for epoch in range(1):
         running_loss = 0.0
         for i in range(len(states) - BATCH_SIZE - 1):
@@ -127,15 +126,12 @@ if __name__ == "__main__":
                 print(f"[{epoch + 1}, {i + 1:5d}] loss: {running_loss:.3f}")
 
                 print(f"Action: {target_steer[0]}, output: {steer[0]}")
-                print(
-                    f"Action: {torch.argmax(target_forward_backward[0, 0])}, output: {torch.argmax(forward_backward[0, 0])}"
-                )
-                print(
-                    f"Action: {torch.argmax(target_forward_backward[0, 1])}, output: {torch.argmax(forward_backward[0, 1])}"
-                )
-
-            if i % 500 == 499:
-                break
+                # print(
+                #     f"Action: {torch.argmax(target_forward_backward[0, 0])}, output: {torch.argmax(forward_backward[0, 0])}"
+                # )
+                # print(
+                #     f"Action: {torch.argmax(target_forward_backward[0, 1])}, output: {torch.argmax(forward_backward[0, 1])}"
+                # )
 
     all_actions = np.array(all_actions)
     all_outputs = np.array(all_outputs)
