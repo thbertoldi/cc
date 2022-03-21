@@ -665,6 +665,7 @@ if __name__ == "__main__":
     env = CarRacing()
     env.render()
 
+    cont = 0
     isopen = True
     while isopen:
         s = env.reset()
@@ -672,10 +673,16 @@ if __name__ == "__main__":
         steps = 0
         restart = False
         while True:
-            direct, b = consult_nn(np.transpose(s.copy()))
-            a[0] = direct/10
-            a[1] = torch.argmax(b[0][0])
-            a[2] = torch.argmax(b[0][1])
+            steer, b = consult_nn(np.transpose(s.copy()))
+            cont += 1
+            if cont > 100:  # evita os primeiros frames zoados
+                a[0] = steer
+                a[1] = torch.argmax(b[0][0])
+                a[2] = torch.argmax(b[0][1])
+            else:
+                a[0] = 0.0
+                a[1] = 0.0
+                a[2] = 0.0
             s, r, done, info = env.step(a)
             total_reward += r
             if steps % 200 == 0 or done:
