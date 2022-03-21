@@ -654,14 +654,14 @@ class Net(nn.Module):
 
         return x
 
-nnnn = Net()
-nnnn.load_state_dict(torch.load("resp.pth"))
+nn_done = Net()
+nn_done.load_state_dict(torch.load("resp.pth"))
 
 
 def consult_nn(state):
     k = torch.FloatTensor(state)
     k = torch.reshape(k, shape=(1, *k.size()))
-    return nnnn(k)
+    return nn_done(k)
 
 
 if __name__ == "__main__":
@@ -677,14 +677,12 @@ if __name__ == "__main__":
         steps = 0
         restart = False
         while True:
-            b = consult_nn(np.transpose(s.copy()))
-            a1 = torch.argmax(b[0, 0]).detach().numpy()
-            a2 = torch.argmax(b[0, 1]).detach().numpy()
-            a3 = torch.argmax(b[0, 2]).detach().numpy()
-            a4 = torch.argmax(b[0, 3]).detach().numpy()
-
+            result = consult_nn(np.transpose(s.copy()))
+            a1 = torch.argmax(result[0, 0]).detach().numpy()
+            a2 = torch.argmax(result[0, 1]).detach().numpy()
+            a3 = torch.argmax(result[0, 2]).detach().numpy()
+            a4 = torch.argmax(result[0, 3]).detach().numpy()
             new_a1 = a1 - a2
-            new_action = np.array([new_a1, a3, a4])
             a[0] = new_a1
             a[1] = a3
             a[2] = a4

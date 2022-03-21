@@ -12,12 +12,12 @@ BATCH_SIZE = 10
 def load_data():
     actions = np.load("actions.npy", allow_pickle=True)
     actions = actions.astype(np.longlong)
-    # actions = actions.astype(np.float32)
 
     states = np.load("states.npy", allow_pickle=True)
-    # states = states.astype(np.float32)
+
     print(f"Tenho {len(actions)} ações")
     print(f"Tenho {len(states)} estados")
+
     if SHOW_IMAGES:
         _, ax = plt.subplots(3, 1)
         for i in range(3):
@@ -27,7 +27,7 @@ def load_data():
         plt.show()
         plt.imshow(states[600, :, :, :])
         plt.show()
-    # return (torch.from_numpy(actions.astype(np.F)), states)
+
     return actions.astype(np.float32), states
 
 
@@ -45,10 +45,8 @@ class Net(nn.Module):
     def forward(self, x):
         x = self.conv1(x)
         x = F.relu(x)
-        # x = F.max_pool2d(x, 2)
         x = self.conv2(x)
         x = F.relu(x)
-        # x = F.max_pool2d(x, 2)
         x = self.conv3(x)
         x = F.relu(x)
         x = F.max_pool2d(x, 2)
@@ -61,8 +59,6 @@ class Net(nn.Module):
         x = F.relu(x)
         x = torch.reshape(x, shape=(BATCH_SIZE, 4, 2))
         x = F.softmax(x, dim=2)
-        # print("antes", x.size())
-        #print(x.size())
 
         return x
 
@@ -81,7 +77,6 @@ if __name__ == "__main__":
     net = Net()
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(net.parameters(), lr=0.1, momentum=0.5)
-    torch.autograd.set_detect_anomaly(True)
     all_actions = []
     all_outputs = []
     losses = []
@@ -89,16 +84,15 @@ if __name__ == "__main__":
         running_loss = 0.0
         for i in range(len(metadata[0])-BATCH_SIZE-1):
             action, state = metadata[0][i:i+BATCH_SIZE], metadata[1][i:i+BATCH_SIZE]
-            # action, state = metadata[0:1][i], metadata[1:1+1][i]
 
             state = np.transpose(state)
             state = np.reshape(state, newshape=(BATCH_SIZE, 3, 96, 96))
-
             state = np.array(state)
+
             optimizer.zero_grad()
+
             output = net(torch.Tensor(state))
-            # print("Output is", output.size())
-            # print(output)
+
             old_action = action.copy()
             action = []
             for i in range(BATCH_SIZE):
@@ -112,19 +106,13 @@ if __name__ == "__main__":
                 action.append(i_action)
 
             action = np.array(action)
-            # action = torch.Tensor(action, requires_grad=True)
             action = torch.tensor(action, requires_grad=True)
-            #print(action.size())
-
-            # output = torch.reshape(output, (1, *output.size()))
-            # print(output.max(-2)[1])
-            # print(action.type())
-            # print(output.type())
-
 
             loss = criterion(action.double(), output.double())
+
             loss.backward()
             optimizer.step()
+
             running_loss = loss.item()
 
             all_actions.append(action[0:1].detach().numpy())
